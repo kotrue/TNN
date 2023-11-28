@@ -98,7 +98,7 @@ int Onnx2TNN::TNNWriteModel() {
                 }
             }
 
-            if (constants_.size() < 0) {
+            if (constants_.size() == 0) {
                 break;
             }
 
