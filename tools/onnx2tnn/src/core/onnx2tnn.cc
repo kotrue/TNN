@@ -314,13 +314,10 @@ int Onnx2TNN::TNNWriteProto() {
                 onnx::NodeProto& node      = (onnx::NodeProto&)graph.node(i);
                 const std::string& onnx_op = node.op_type();
 
-                if (onnx_op == k_tnn_noop_type) {
+                if (onnx_op == k_tnn_noop_type || onnx_op == "Constant") {
                     continue;
                 }
-                if (onnx_op == "Constant" &&
-                    onnx_net_info_.used_const_node.find(node.output(0)) == onnx_net_info_.used_const_node.end()) {
-                    continue;
-                }
+
                 auto op_converter = OnnxOpConverterManager::Shared()->GetOnnxOpConverter(onnx_op);
                 if (!op_converter) {
                     LOGE("error::op convert failed onnx:%s\n", onnx_op.c_str());
@@ -433,14 +430,10 @@ int Onnx2TNN::OnnxExtractBlobWeights() {
 
         if (onnx_op == "Constant") {
             onnx::TensorProto tensor = get_node_attr_tensor(node, "value");
-            // 如果是作为参数存入，则放到weights，否则作为常量存入constants中
-            if (onnx_net_info_.used_const_node.find(node.output(0)) == onnx_net_info_.used_const_node.end()) {
-            weights[node.output(0)]  = tensor;
-                LOGD("const node is used as weight = %s\n", name.c_str());
-            } else {
+            if (onnx_net_info_.used_const_node.find(node.output(0)) != onnx_net_info_.used_const_node.end()) {
                 constants_[node.output(0)]  = tensor;
-                LOGD("const node is used as constant input = %s\n", name.c_str());
             }
+            weights[node.output(0)]  = tensor;
             continue;
         } else if (onnx_op == "Cast") {
             // do nothing
